@@ -1,0 +1,184 @@
+#let's first scrape the data using selenium. The NHL website is javascript based. 
+
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
+import pandas as pd
+import time
+
+def scrape_calder_trophy_data():
+    """
+    Scrapes Calder Memorial Trophy winners from NHL Records website
+    Returns: pandas DataFrame with trophy winners data
+    """
+    
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+
+    try:
+        print("Loading NHL Calder Trophy page...")
+        driver.get("https://records.nhl.com/awards/trophies/calder-memorial-trophy")
+        time.sleep(15)
+        
+        # Wait for the React table to load
+        WebDriverWait(driver, 20).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".trophy-winner-historic-table"))
+        )
+        
+        # Execute JavaScript to extract table data
+        data_script = """
+        var rows = document.querySelectorAll('.ReactTable .rt-tbody .rt-tr-group');
+        var data = [];
+        rows.forEach(function(row) {
+            var cells = row.querySelectorAll('.rt-td');
+            var rowData = [];
+            cells.forEach(function(cell) {
+                rowData.push(cell.innerText.trim());
+            });
+            if (rowData.some(cell => cell.length > 0)) {
+                data.push(rowData);
+            }
+        });
+        return data;
+        """
+        
+        # Get headers
+        header_script = """
+        var headers = document.querySelectorAll('.ReactTable .rt-thead .rt-th');
+        var headerData = [];
+        headers.forEach(function(header) {
+            if (header.innerText.trim()) {
+                headerData.push(header.innerText.trim());
+            }
+        });
+        return headerData;
+        """
+        
+        table_data = driver.execute_script(data_script)
+        headers = driver.execute_script(header_script)
+        
+        print(f"Successfully extracted {len(table_data)} rows of data")
+        print(f"Columns: {headers}")
+        
+        if table_data and headers:
+            # Create DataFrame
+            df = pd.DataFrame(table_data, columns=headers[:len(table_data[0]) if table_data else 0])
+            
+            # Basic data cleaning for data science work
+            if not df.empty:
+                print(f"\nDataFrame shape: {df.shape}")
+                print(f"Column names: {list(df.columns)}")
+                return df
+            else:
+                print("DataFrame is empty")
+                return pd.DataFrame()
+        else:
+            print("No data extracted")
+            return pd.DataFrame()
+
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        return pd.DataFrame()
+        
+    finally:
+        driver.quit()
+
+
+def scrape_stanley_winners_data():
+    """
+    Scrapes Calder Memorial Trophy winners from NHL Records website
+    Returns: pandas DataFrame with trophy winners data
+    """
+    
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+
+    try:
+        print("Loading NHL Stanley Cup WInners page...")
+        driver.get("https://records.nhl.com/awards/stanley-cup/winners")
+        time.sleep(15)
+        
+        # Wait for the React table to load
+        WebDriverWait(driver, 20).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".trophy-winner-historic-table"))
+        )
+        
+        # Execute JavaScript to extract table data
+        data_script = """
+        var rows = document.querySelectorAll('.ReactTable .rt-tbody .rt-tr-group');
+        var data = [];
+        rows.forEach(function(row) {
+            var cells = row.querySelectorAll('.rt-td');
+            var rowData = [];
+            cells.forEach(function(cell) {
+                rowData.push(cell.innerText.trim());
+            });
+            if (rowData.some(cell => cell.length > 0)) {
+                data.push(rowData);
+            }
+        });
+        return data;
+        """
+        
+        # Get headers
+        header_script = """
+        var headers = document.querySelectorAll('.ReactTable .rt-thead .rt-th');
+        var headerData = [];
+        headers.forEach(function(header) {
+            if (header.innerText.trim()) {
+                headerData.push(header.innerText.trim());
+            }
+        });
+        return headerData;
+        """
+        
+        table_data = driver.execute_script(data_script)
+        headers = driver.execute_script(header_script)
+        
+        print(f"Successfully extracted {len(table_data)} rows of data")
+        print(f"Columns: {headers}")
+        
+        if table_data and headers:
+            # Create DataFrame
+            df = pd.DataFrame(table_data, columns=headers[:len(table_data[0]) if table_data else 0])
+            
+            # Basic data cleaning for data science work
+            if not df.empty:
+                print(f"\nDataFrame shape: {df.shape}")
+                print(f"Column names: {list(df.columns)}")
+                return df
+            else:
+                print("DataFrame is empty")
+                return pd.DataFrame()
+        else:
+            print("No data extracted")
+            return pd.DataFrame()
+
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        return pd.DataFrame()
+        
+    finally:
+        driver.quit()
+
+
+# save to CSV files
+calder = scrape_calder_trophy_data()
+stanley = scrape_stanley_winners_data()
+
+calder.to_csv('calder_winners.csv', index=False)
+stanley.to_csv('stanley_winners.csv', index=False)
